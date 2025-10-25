@@ -6,8 +6,11 @@ public class Main {
     private static final ArrayList<Articulo> productosDB = obtenerArticulo();
     private static Scanner entrada = new Scanner(System.in);
 
+    static ArrayList<ArrayList<Articulo>> pedidos = new ArrayList<>();
+
+
     public static void main(String[] args) {
-        System.out.println("Bienvenidos a Libreria Anivel");
+        System.out.println("Bienvenidos a Librería Anivel");
         label:
         while (true) {
             System.out.println("""
@@ -18,7 +21,8 @@ public class Main {
                     3 - Búsqueda articulo
                     4 - Editar nombre del articulo
                     5 - Eliminar articulo
-                    6 - nueva funcion
+                    6 - Crear un pedido
+                    7 - Listar pedidos
                     """);
             int opcionUsuario = entrada.nextInt();
             entrada.nextLine();
@@ -29,7 +33,8 @@ public class Main {
                 case 3 -> buscarProductoPorNombre(productosDB);
                 case 4 -> editarProducto(productosDB);
                 case 5 -> borrarProducto(productosDB);
-                case 6 -> filtroPorPrecio(productosDB);
+                case 6 -> crearPedido(productosDB);
+                case 7 -> listarPedidos();
                 case 0 -> {
                     System.out.println("Gracias por usar la app de Anivel!");
                     break label; // corta el bucle donde se ejecuta
@@ -73,7 +78,7 @@ public class Main {
         System.out.println("====================================================================================================================================");
 
         if (productos == null || productos.isEmpty()) {
-            System.out.println("⚠️  No hay articulos para mostrar.");
+            System.out.println(" No hay articulos para mostrar.");
         } else {
             System.out.printf("| %-3s | %-35s | %-20s | %-10s | %-10s | %-35s |%n",
                     "ID", "Nombre", "Marca", "Precio", "Categoría", "Descripción");
@@ -128,7 +133,6 @@ public class Main {
 
         // TODO: validar que el usuario quiere editar el producto que se encontro
         System.out.print("Ingrese el nuevo nombre: ");
-        entrada.nextLine();
         String nuevoNombre = entrada.nextLine();
 
 
@@ -136,38 +140,205 @@ public class Main {
         producto.setNombre(nuevoNombre);
 
         System.out.printf("El nombre del articulo cambio de %s a %s", nombreOriginal, nuevoNombre);
+
+        System.out.println();
+        pausa();
     }
 
     public static void borrarProducto(List<Articulo> productos) {
-        Articulo producto = obtenerProductoPorId(productos);
-        // TODO: validar que encontramos el producto
-        if (producto == null) {
-            System.out.println("No se pudo borrar el articulo");
-            pausa();
-            return; //
-        }
-        String nombreOriginal = producto.getNombre();
-        System.out.println("Articulo a borrar:");
-        System.out.println(nombreOriginal);
-        // TODO: validar que el usuario quiere borrar el producto que se encontro
+        int idBusqueda;
 
-        // aca borramos el producto
-        productos.remove(producto);
-        System.out.println("Borrado exitosamente!");
-    }
+        while (true) {
+            System.out.print("Ingrese el id del artículo: ");
+            String entradaUsuario = entrada.nextLine().trim();
 
-    public static void filtroPorPrecio(List<Articulo> productos) {
-        double precioFiltro = entrada.nextDouble();
+            if (entradaUsuario.isEmpty()) {
+                System.out.println("⚠️ Debe ingresar un número. Intente nuevamente.");
+                continue;
+            }
 
-        ArrayList<Articulo> productosFiltrados = new ArrayList<>();
-
-        for (Articulo producto : productos) {
-            if (producto.getPrecio() <= precioFiltro) {
-                productosFiltrados.add(producto);
+            try {
+                idBusqueda = Integer.parseInt(entradaUsuario);
+                break;
+            } catch (NumberFormatException e) {
+                System.out.println("El ID debe ser un número entero. Intente nuevamente.");
             }
         }
 
-        listarProductos(productosFiltrados);
+        Articulo producto = null;
+        for (Articulo p : productos) {
+            if (p.coincideId(idBusqueda)) {
+                producto = p;
+                break;
+            }
+        }
+
+        if (producto == null) {
+            System.out.println("No pudimos encontrar el artículo con el ID: " + idBusqueda);
+            pausa();
+            return;
+        }
+
+        String nombreOriginal = producto.getNombre();
+        System.out.println("Artículo a borrar:");
+        System.out.println(nombreOriginal);
+        System.out.print("¿Está seguro que desea eliminar este artículo? (s/n para confirmar): ");
+        String confirmacion = entrada.nextLine().trim().toLowerCase();
+
+        if (confirmacion.equals("s") || confirmacion.equals("si")) {
+            productos.remove(producto);
+            System.out.println("Artículo borrado exitosamente!");
+        } else {
+            System.out.println("Operación cancelada. El artículo NO se borró.");
+        }
+
+        System.out.println();
+        pausa();
+    }
+
+
+
+    public static void crearPedido(List<Articulo> productos) {
+        List<Articulo> pedido = new ArrayList<>();
+
+        System.out.println("===== CREAR PEDIDO =====");
+        System.out.println("Seleccione los artículos que desea agregar al pedido. Ingrese 0 para finalizar.\n");
+
+        System.out.println("====================================================================================================================================");
+        System.out.println("                       LISTA DE ARTICULOS DE LIBRERIA                                                                               ");
+        System.out.println("====================================================================================================================================");
+        System.out.printf("| %-3s | %-35s | %-20s | %-10s | %-10s | %-35s |%n",
+                "ID", "Nombre", "Marca", "Precio", "Categoría", "Descripción");
+        System.out.println("------------------------------------------------------------------------------------------------------------------------------------");
+        for (Articulo a : productos) {
+            System.out.printf("| %3d | %-35s | %-20s | $%9.2f | %-10s | %-35s |%n",
+                    a.getId(), a.getNombre(), a.getMarca(), a.getPrecio(), a.getCategoria(), a.getDescripcion());
+        }
+        System.out.println("====================================================================================================================================");
+
+        while (true) {
+            System.out.print("\nIngrese el ID del artículo que desea agregar al pedido (0 para finalizar): ");
+            String entradaUsuario = entrada.nextLine().trim();
+
+            int id;
+            try {
+                id = Integer.parseInt(entradaUsuario);
+            } catch (NumberFormatException e) {
+                System.out.println("El ID debe ser un número entero. Intente nuevamente.");
+                continue;
+            }
+
+            if (id == 0) break;
+
+            Articulo productoSeleccionado = null;
+            for (Articulo a : productos) {
+                if (a.coincideId(id)) {
+                    productoSeleccionado = a;
+                    break;
+                }
+            }
+
+            if (productoSeleccionado == null) {
+                System.out.println("No se encontró un artículo con ese ID.");
+                continue;
+            }
+
+            pedido.add(productoSeleccionado);
+            System.out.println("Artículo agregado con éxito: " + productoSeleccionado.getNombre());
+
+            // Mostrar listado de artículos agregados hasta ahora
+            System.out.println("\n===== ARTÍCULOS AGREGADOS HASTA AHORA =====");
+            double subtotal = 0;
+            System.out.printf("| %-3s | %-35s | %-20s | %-10s | %-10s | %-35s |%n",
+                    "ID", "Nombre", "Marca", "Precio", "Categoría", "Descripción");
+            System.out.println("------------------------------------------------------------------------------------------------------");
+            for (Articulo a : pedido) {
+                System.out.printf("| %3d | %-35s | %-20s | $%9.2f | %-10s | %-35s |%n",
+                        a.getId(), a.getNombre(), a.getMarca(), a.getPrecio(), a.getCategoria(), a.getDescripcion());
+                subtotal += a.getPrecio();
+            }
+            System.out.println("------------------------------------------------------------------------------------------------------");
+            System.out.printf("Subtotal hasta ahora: $%.2f%n", subtotal);
+        }
+
+        if (pedido.isEmpty()) {
+            System.out.println("No se seleccionaron artículos para el pedido.");
+            pausa();
+            return;
+        }
+
+        // Mostrar tabla final de artículos seleccionados
+        System.out.println("\n===== RESUMEN DEL PEDIDO =====");
+        double total = 0;
+        System.out.printf("| %-3s | %-35s | %-20s | %-10s | %-10s | %-35s |%n",
+                "ID", "Nombre", "Marca", "Precio", "Categoría", "Descripción");
+        System.out.println("------------------------------------------------------------------------------------------------------");
+        for (Articulo a : pedido) {
+            System.out.printf("| %3d | %-35s | %-20s | $%9.2f | %-10s | %-35s |%n",
+                    a.getId(), a.getNombre(), a.getMarca(), a.getPrecio(), a.getCategoria(), a.getDescripcion());
+            total += a.getPrecio();
+        }
+        System.out.println("------------------------------------------------------------------------------------------------------");
+        System.out.printf("TOTAL: $%.2f%n", total);
+
+        // Confirmar pedido
+        while (true) {
+            System.out.print("\n¿Desea confirmar el pedido? (s/n): ");
+            String confirmar = entrada.nextLine().trim().toLowerCase();
+
+            if (confirmar.equals("s")) {
+                pedidos.add(new ArrayList<>(pedido));
+                System.out.println("Pedido confirmado con éxito!");
+                break;
+            } else if (confirmar.equals("n")) {
+                System.out.print("No se realizará el pedido. ¿Está seguro? (s/n): ");
+                String seguro = entrada.nextLine().trim().toLowerCase();
+                if (seguro.equals("s")) {
+                    System.out.println("El pedido no se realizó.");
+                    break;
+                } else if (seguro.equals("n")) {
+                } else {
+                    System.out.println("Opción inválida. Intente nuevamente.");
+                }
+            } else {
+                System.out.println("Opción inválida. Intente nuevamente.");
+            }
+        }
+
+        pausa();
+
+
+    }
+
+    public static void listarPedidos() {
+        if (pedidos.isEmpty()) {
+            System.out.println("No hay pedidos realizados.");
+            pausa();
+            return;
+        }
+
+        System.out.println("===== LISTA DE PEDIDOS =====");
+        for (int i = 0; i < pedidos.size(); i++) {
+            ArrayList<Articulo> pedido = pedidos.get(i);
+            System.out.println("Pedido #" + (i + 1));
+            System.out.println("====================================================================================================================================");
+            System.out.println("                       LISTA DE ARTICULOS DE LIBRERIA                                                                               ");
+            System.out.println("====================================================================================================================================");
+            System.out.printf("| %-3s | %-35s | %-20s | %-10s | %-10s | %-35s |%n",
+                    "ID", "Nombre", "Marca", "Precio", "Categoría", "Descripción");
+            System.out.println("---------------------------------------------------------------------------------------------------------------------------------");
+
+            double total = 0;
+            for (Articulo a : pedido) {
+                System.out.printf("| %3d | %-35s | %-20s | $%9.2f | %-10s | %-35s |%n",
+                        a.getId(), a.getNombre(), a.getMarca(), a.getPrecio(), a.getCategoria(), a.getDescripcion());
+                total += a.getPrecio();
+            }
+            System.out.println("====================================================================================================================================");
+            System.out.printf("Total del pedido: $ %.2f%n", total);
+            System.out.println("-----------------------------------");
+        }
+        pausa();
     }
 
     /* UTILIDADES */
@@ -208,6 +379,7 @@ public class Main {
         }
         // TODO: limpiar la pantalla de la consola
     }
+
 
     public static ArrayList<Articulo> obtenerArticulo() {
         ArrayList<Articulo> productos = new ArrayList<>();
